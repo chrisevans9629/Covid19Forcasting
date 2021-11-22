@@ -54,6 +54,26 @@ forcasted_cases = data
 forcasted_cases.head(10)
 
 # %% [markdown]
+# ## Step 2.1
+# Read the population data
+
+# %%
+pop_data = pd.read_csv('covid_county_population_usafacts.csv')
+
+pop_data = pop_data[['countyFIPS','population']]
+
+pop_data = pop_data.rename(columns={'countyFIPS': "fips"})
+
+pop_data.head(10)
+
+# %% [markdown]
+# # Step 2.2
+# Verify Data integrity
+
+# %%
+
+
+# %% [markdown]
 # # Step 3
 # Merge the two datasets together based on predication target date and the county
 
@@ -66,6 +86,17 @@ confirmed_cases['date'] = confirmed_cases['date'].astype(str)
 
 all_cases = pd.merge(forcasted_cases, confirmed_cases, on=['date','fips'], how='inner')
 
+all_cases.head(10)
+
+# %% [markdown]
+# # Step 3.1 
+# Merge population data with all cases
+
+# %%
+pop_data['fips'] = pop_data['fips'].astype(str)
+
+all_cases = pd.merge(all_cases, pop_data, on=['fips'], how='inner')
+# add error calculations here 
 all_cases.head(10)
 
 # %% [markdown]
