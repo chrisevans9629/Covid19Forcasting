@@ -1,5 +1,3 @@
-# To add a new cell, type '# %%'
-# To add a new markdown cell, type '# %% [markdown]'
 # %%
 import pandas as pd
 
@@ -11,61 +9,33 @@ import pandas as pd
 
 try:
     files = []
-    for i in range(2):
+    for i in range(3):
         files.append('confirmed_daily_cases{id}.csv'.format(id=i))
     data = pd.concat(map(pd.read_csv, files), ignore_index=True)
     print('found files for actual daily cases')
     print(data.head(4))
     confirmed_cases = data
 except FileNotFoundError:
-    print('could not find daily cases files.  regenerating...')
-    data = pd.read_csv('covid_confirmed_usafacts.csv')
-    # convert column wide to rows
-    data = data.melt(id_vars=["countyFIPS","County Name", "State", "StateFIPS"], var_name="date", value_name="value")
-    print(data.head(4))
+    import create_act_cases
+    confirmed_cases = create_act_cases.confirmed_cases
 
-    # select columns
-    data = data[['countyFIPS','value','date', 'County Name', 'State']]
 
-    data['date'] = pd.to_datetime(data['date'])
+# %% [markdown]
+# ## Step 1.1
+# Validate the data  
 
-    # rename columns
-    data = data.rename(columns={"countyFIPS": "fips", "value": "act_cases", "County Name": "county", "State": "state"})
+# %%
+confirmed_cases[confirmed_cases.date == '2020-09-12'].groupby('date').sum()
 
-    print(data.head(10))
+# %%
+confirmed_cases
 
-    # gets the previous row value
-    def getDaily(values):
-        daily = []
-        length = len(values)
-        for i in range(length):
-            if i == 0:
-                daily.append(values[i])
-            else:
-                daily.append(values[i]-values[i-1])
-        return daily
+# %%
+confirmed_cases['act_cases'] = confirmed_cases['weekly_cases']
 
-    # get the counties
-    counties = data.groupby('fips')
+confirmed_cases = confirmed_cases.drop(columns=['weekly_cases', 'date_last_week_last_week', 'county_last_week','date_last_week.1', 'act_cases_last_week', 'date_last_week'])
 
-    dataset = pd.DataFrame()
-
-    # for each county, sort by date and get the daily cases for each county
-    for key, county in counties:
-        county = county.sort_values(by='date').reset_index()
-        act_cases = county['act_cases']
-        county['daily_cases'] = getDaily(act_cases)
-        dataset = dataset.append(county)
-
-    dataset['act_cases'] = dataset['daily_cases']
-
-    dataset = dataset.drop(['daily_cases','index'], 1)
-
-    confirmed_cases = dataset
-    # write the cases to a file
-    import numpy as np
-    for id, df_i in enumerate(np.array_split(confirmed_cases, 2)):
-        df_i.to_csv('confirmed_daily_cases{id}.csv'.format(id=id), index=False)
+confirmed_cases
 
 # %% [markdown]
 # # Step 2
@@ -80,7 +50,6 @@ print(item)
 
 data = pd.concat(map(pd.read_csv, item), ignore_index=True)
 
-
 # %%
 #data = data[data.target == "1 wk ahead inc case"]
 #data = data[data.location_name != data.State]
@@ -93,6 +62,7 @@ data = data[['model','date','fips','for_cases','target']]
 forcasted_cases = data
 
 forcasted_cases.head(10)
+
 
 # %% [markdown]
 # ## Step 2.1
@@ -122,6 +92,9 @@ all_cases = pd.merge(forcasted_cases, confirmed_cases, on=['date','fips'], how='
 
 all_cases.head(10)
 
+# %%
+all_cases[all_cases.date == '2020-09-12'].groupby(['date','fips']).mean().groupby('date').sum()
+
 # %% [markdown]
 # # Step 3.1 
 # Merge population data with all cases
@@ -144,7 +117,6 @@ all_cases.to_csv('all_cases.csv')
 
 # %%
 all_cases[(all_cases.state == "MO") & (all_cases.county == "Jackson County ") & (all_cases.model == "Columbia") & (all_cases.target == "1 wk ahead inc case")].sort_values(by='date')
-
 
 # %%
 all_cases[(all_cases.state == "AK") & (all_cases.county == "Aleutians East Borough ") & (all_cases.model == "Columbia") & (all_cases.target == "1 wk ahead inc case")].sort_values(by='date')
